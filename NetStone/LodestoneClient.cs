@@ -37,12 +37,13 @@ public class LodestoneClient : IDisposable
     public IGameDataProvider? Data { get; set; }
 
     private readonly HttpClient client;
+    private readonly string? apiKey;
 
     /// <summary>
     /// Initialize a new Lodestone client with default options.
     /// </summary>
     private LodestoneClient(DefinitionsContainer definitions, IGameDataProvider? gameData = null,
-        string lodestoneBaseAddress = Constants.LodestoneBase)
+        string lodestoneBaseAddress = Constants.LodestoneBase, string? privateKey = "")
     {
         this.client = new HttpClient
         {
@@ -51,6 +52,11 @@ public class LodestoneClient : IDisposable
 
         this.Definitions = definitions;
         this.Data = gameData;
+
+        if (!string.IsNullOrWhiteSpace(privateKey))
+        {
+            apiKey = privateKey;
+        }
     }
 
     /// <summary>
@@ -62,12 +68,12 @@ public class LodestoneClient : IDisposable
     /// <exception cref="FormatException"></exception>
     /// <returns></returns>
     public static async Task<LodestoneClient> GetClientAsync(IGameDataProvider? gameData = null,
-        string lodestoneBaseAddress = Constants.LodestoneBase)
+        string lodestoneBaseAddress = Constants.LodestoneBase, string? privateKey = "")
     {
         var definitions = new XivApiDefinitionsContainer();
         await definitions.Reload();
 
-        return new LodestoneClient(definitions, gameData, lodestoneBaseAddress);
+        return new LodestoneClient(definitions, gameData, lodestoneBaseAddress, privateKey);
     }
 
     #region Character
@@ -178,6 +184,7 @@ public class LodestoneClient : IDisposable
     private async Task<T?> GetParsed<T>(string url, Func<HtmlNode, T?> createParseable,
         UserAgent agent = UserAgent.Desktop) where T : LodestoneParseable
     {
+        if (apiKey is not null) url += $"private_key={apiKey}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
 
         switch (agent)
